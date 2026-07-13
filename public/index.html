@@ -91,7 +91,7 @@
           </div>
         </div>
         <div class="panel-body">
-          <p class="panel-desc">Sube una foto con todas tus prendas</p>
+          <p class="panel-desc">Sube 1 o varias fotos de tus prendas</p>
 
           <div class="upload-zone" id="clothesDropZone"
                ondragover="handleDragOver(event)"
@@ -99,19 +99,16 @@
                ondrop="handleDrop(event, 'clothes')">
             <div class="upload-inner">
               <div class="upload-icon">👗</div>
-              <p class="upload-text">Arrastra tu foto aquí</p>
-              <p class="upload-subtext">o haz clic para seleccionar</p>
-              <input type="file" id="clothesInput" accept="image/*" onchange="handleFileSelect(event, 'clothes')" class="file-input" />
+              <p class="upload-text">Arrastra tus fotos aquí</p>
+              <p class="upload-subtext">Puedes seleccionar varias a la vez</p>
+              <input type="file" id="clothesInput" accept="image/*" multiple onchange="handleFileSelect(event, 'clothes')" class="file-input" />
               <button class="y2k-btn btn-purple upload-btn" onclick="document.getElementById('clothesInput').click()">
-                📁 Seleccionar Foto
+                📁 Seleccionar Fotos
               </button>
             </div>
           </div>
 
-          <div class="preview-container" id="clothesPreview" style="display:none">
-            <img id="clothesImg" class="preview-img" alt="Prendas" />
-            <button class="y2k-btn btn-red btn-small" onclick="removeImage('clothes')">✖ Quitar</button>
-          </div>
+          <div class="clothes-previews" id="clothesPreviews"></div>
 
           <div class="detected-items" id="clothesDetected" style="display:none">
             <p class="detected-title">🔍 Prendas detectadas:</p>

@@ -4,21 +4,18 @@
 
 // Estado global
 const state = {
-  clothesFile: null,
-  personFile: null,
-  clothesBase64: null,
+  clothesFiles: [],       // array de { base64, name }
   personBase64: null,
   isGenerating: false,
 };
 
-// ---- Inicialización ----
+// ---- Inicializacion ----
 document.addEventListener('DOMContentLoaded', () => {
   initStars();
   initClock();
   initVisitorCounter();
 });
 
-// Generar estrellas de fondo animadas
 function initStars() {
   const container = document.getElementById('starsBg');
   for (let i = 0; i < 80; i++) {
@@ -27,7 +24,7 @@ function initStars() {
       position: absolute;
       width: ${Math.random() * 3 + 0.5}px;
       height: ${Math.random() * 3 + 0.5}px;
-      background: ${['#fff', '#ff66cc', '#00ffff', '#cc66ff', '#ffff00'][Math.floor(Math.random() * 5)]};
+      background: ${['#fff','#ff66cc','#00ffff','#cc66ff','#ffff00'][Math.floor(Math.random()*5)]};
       border-radius: 50%;
       top: ${Math.random() * 100}%;
       left: ${Math.random() * 100}%;
@@ -38,7 +35,6 @@ function initStars() {
   }
 }
 
-// Reloj en tiempo real
 function initClock() {
   const update = () => {
     const now = new Date();
@@ -50,7 +46,6 @@ function initClock() {
   setInterval(update, 60000);
 }
 
-// Contador de visitas (simulado + localStorage)
 function initVisitorCounter() {
   let count = parseInt(localStorage.getItem('outfitai_visits') || '42069');
   count += Math.floor(Math.random() * 3) + 1;
@@ -58,126 +53,152 @@ function initVisitorCounter() {
   document.getElementById('visitorCount').textContent = String(count).padStart(6, '0');
 }
 
-// ---- Navegación ----
+// ---- Navegacion ----
 function scrollToApp() {
   document.getElementById('appSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-
-function showInfo() {
-  document.getElementById('infoModal').classList.add('active');
-}
-
-function closeInfo() {
-  document.getElementById('infoModal').classList.remove('active');
-}
-
-function closeError() {
-  document.getElementById('errorSection').style.display = 'none';
-}
+function showInfo() { document.getElementById('infoModal').classList.add('active'); }
+function closeInfo() { document.getElementById('infoModal').classList.remove('active'); }
+function closeError() { document.getElementById('errorSection').style.display = 'none'; }
 
 // ---- Drag & Drop ----
 function handleDragOver(e) {
   e.preventDefault();
   e.currentTarget.classList.add('dragover');
 }
-
 function handleDragLeave(e) {
   e.currentTarget.classList.remove('dragover');
 }
-
 function handleDrop(e, type) {
   e.preventDefault();
   e.currentTarget.classList.remove('dragover');
-  const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith('image/')) {
-    processFile(file, type);
+  const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+  if (files.length === 0) { showError('Solo se aceptan archivos de imagen (JPG, PNG, etc.)'); return; }
+  if (type === 'clothes') {
+    files.forEach(f => processClothesFile(f));
   } else {
-    showError('Solo se aceptan archivos de imagen (JPG, PNG, GIF, WebP)');
+    processPersonFile(files[0]);
   }
 }
 
 function handleFileSelect(e, type) {
-  const file = e.target.files[0];
-  if (file) processFile(file, type);
+  const files = Array.from(e.target.files);
+  if (type === 'clothes') {
+    files.forEach(f => processClothesFile(f));
+  } else {
+    processPersonFile(files[0]);
+  }
+  e.target.value = ''; // reset para poder volver a seleccionar
 }
 
-// Procesar archivo de imagen
-function processFile(file, type) {
-  if (file.size > 10 * 1024 * 1024) {
-    showError('La imagen es demasiado grande. Máximo 10MB.');
-    return;
-  }
-
+// ---- Procesar fotos de PRENDAS (multiples) ----
+function processClothesFile(file) {
+  if (file.size > 10 * 1024 * 1024) { showError(`"${file.name}" es demasiado grande. Max 10MB.`); return; }
   const reader = new FileReader();
   reader.onload = (e) => {
-    const base64 = e.target.result;
-
-    if (type === 'clothes') {
-      state.clothesFile = file;
-      state.clothesBase64 = base64;
-      showPreview('clothes', base64);
-    } else {
-      state.personFile = file;
-      state.personBase64 = base64;
-      showPreview('person', base64);
-    }
-
+    state.clothesFiles.push({ base64: e.target.result, name: file.name });
+    renderClothesPreviews();
     checkGenerateReady();
   };
   reader.readAsDataURL(file);
 }
 
-// Mostrar preview de imagen
-function showPreview(type, base64) {
-  const dropZone = document.getElementById(`${type}DropZone`);
-  const preview = document.getElementById(`${type}Preview`);
-  const img = document.getElementById(`${type}Img`);
+function renderClothesPreviews() {
+  const container = document.getElementById('clothesPreviews');
+  const dropZone = document.getElementById('clothesDropZone');
 
-  dropZone.style.display = 'none';
-  img.src = base64;
-  preview.style.display = 'block';
-}
+  container.innerHTML = '';
 
-// Quitar imagen
-function removeImage(type) {
-  const dropZone = document.getElementById(`${type}DropZone`);
-  const preview = document.getElementById(`${type}Preview`);
-  const input = document.getElementById(`${type}Input`);
-
-  if (type === 'clothes') {
-    state.clothesFile = null;
-    state.clothesBase64 = null;
-    // Ocultar detected items también
-    document.getElementById('clothesDetected').style.display = 'none';
-    document.getElementById('itemsTags').innerHTML = '';
-  } else {
-    state.personFile = null;
-    state.personBase64 = null;
+  if (state.clothesFiles.length === 0) {
+    dropZone.style.display = 'block';
+    return;
   }
 
-  preview.style.display = 'none';
-  dropZone.style.display = 'block';
-  input.value = '';
+  // Ocultar dropzone cuando hay fotos, mostrar mini version para agregar mas
+  dropZone.style.display = 'none';
 
+  // Grid de previews
+  const grid = document.createElement('div');
+  grid.className = 'clothes-grid';
+
+  state.clothesFiles.forEach((item, index) => {
+    const card = document.createElement('div');
+    card.className = 'clothes-thumb';
+    card.innerHTML = `
+      <img src="${item.base64}" alt="prenda ${index+1}" class="thumb-img" />
+      <button class="thumb-remove" onclick="removeClothesImage(${index})">✖</button>
+    `;
+    grid.appendChild(card);
+  });
+
+  // Boton para agregar mas
+  const addBtn = document.createElement('div');
+  addBtn.className = 'clothes-thumb clothes-add-btn';
+  addBtn.innerHTML = `<span style="font-size:2rem">➕</span><span style="font-size:12px;font-family:'VT323',monospace">Agregar mas</span>`;
+  addBtn.onclick = () => document.getElementById('clothesInput').click();
+  grid.appendChild(addBtn);
+
+  container.appendChild(grid);
+}
+
+function removeClothesImage(index) {
+  state.clothesFiles.splice(index, 1);
+  renderClothesPreviews();
+  if (state.clothesFiles.length === 0) {
+    document.getElementById('clothesDropZone').style.display = 'block';
+    document.getElementById('clothesDetected').style.display = 'none';
+    document.getElementById('itemsTags').innerHTML = '';
+  }
   checkGenerateReady();
 }
 
-// Verificar si se puede generar
+// ---- Procesar foto PERSONAL ----
+function processPersonFile(file) {
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { showError('La imagen es demasiado grande. Max 10MB.'); return; }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    state.personBase64 = e.target.result;
+    showPersonPreview(e.target.result);
+    checkGenerateReady();
+  };
+  reader.readAsDataURL(file);
+}
+
+function showPersonPreview(base64) {
+  document.getElementById('personDropZone').style.display = 'none';
+  document.getElementById('personImg').src = base64;
+  document.getElementById('personPreview').style.display = 'block';
+}
+
+function removeImage(type) {
+  if (type === 'person') {
+    state.personBase64 = null;
+    document.getElementById('personPreview').style.display = 'none';
+    document.getElementById('personDropZone').style.display = 'block';
+    document.getElementById('personInput').value = '';
+  }
+  checkGenerateReady();
+}
+
+// ---- Check boton generar ----
 function checkGenerateReady() {
   const btn = document.getElementById('generateBtn');
   const hint = document.getElementById('generateHint');
-  const ready = state.clothesBase64 && state.personBase64;
+  const hasClothes = state.clothesFiles.length > 0;
+  const hasPerson = !!state.personBase64;
+  const ready = hasClothes && hasPerson;
 
   btn.disabled = !ready;
 
-  if (state.clothesBase64 && !state.personBase64) {
-    hint.textContent = '📸 Ahora sube tu foto de cuerpo completo';
+  if (hasClothes && !hasPerson) {
+    hint.textContent = `📸 Ahora sube tu foto de cuerpo completo (tienes ${state.clothesFiles.length} foto(s) de prendas)`;
     hint.style.color = '#ffdd00';
-  } else if (!state.clothesBase64 && state.personBase64) {
-    hint.textContent = '👗 Ahora sube la foto de tus prendas';
+  } else if (!hasClothes && hasPerson) {
+    hint.textContent = '👗 Ahora sube fotos de tus prendas';
     hint.style.color = '#ffdd00';
   } else if (ready) {
-    hint.textContent = '¡Todo listo! Haz clic en el botón para generar ✨';
+    hint.textContent = `¡Todo listo! ${state.clothesFiles.length} foto(s) de prendas + tu foto ✨`;
     hint.style.color = '#00ff88';
   } else {
     hint.textContent = 'Sube ambas fotos para activar la magia ✨';
@@ -185,17 +206,13 @@ function checkGenerateReady() {
   }
 }
 
-// ---- Generación de Outfits ----
+// ---- Generacion de Outfits ----
 async function generateOutfits() {
-  if (state.isGenerating || !state.clothesBase64 || !state.personBase64) return;
+  if (state.isGenerating || state.clothesFiles.length === 0 || !state.personBase64) return;
 
   state.isGenerating = true;
-
-  // Ocultar resultados anteriores y errores
   document.getElementById('resultsSection').style.display = 'none';
   document.getElementById('errorSection').style.display = 'none';
-
-  // Mostrar loading
   showLoading();
 
   try {
@@ -203,17 +220,23 @@ async function generateOutfits() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        clothesImage: state.clothesBase64,
+        clothesImages: state.clothesFiles.map(f => f.base64),
         personImage: state.personBase64,
       }),
     });
 
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error || 'Error del servidor');
+    // Leer el texto primero para diagnosticar si no es JSON
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error('El servidor no respondio correctamente. Verifica que la API key de OpenAI este configurada en Vercel.');
     }
 
-    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error del servidor');
+    }
 
     hideLoading();
 
@@ -224,7 +247,7 @@ async function generateOutfits() {
     if (data.outfits && data.outfits.length > 0) {
       showResults(data.outfits);
     } else {
-      throw new Error('No se pudieron generar outfits. Intenta con fotos más claras.');
+      throw new Error('No se pudieron generar outfits. Intenta con fotos mas claras.');
     }
 
   } catch (err) {
@@ -236,7 +259,7 @@ async function generateOutfits() {
   }
 }
 
-// Loading steps
+// ---- Loading ----
 const loadingSteps = [
   { text: 'Escaneando tus prendas con IA...', progress: 15 },
   { text: 'Identificando colores y estilos...', progress: 35 },
@@ -251,18 +274,16 @@ let loadingInterval = null;
 function showLoading() {
   document.getElementById('loadingSection').style.display = 'block';
   document.getElementById('loadingSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
-
   let step = 0;
   const progressBar = document.getElementById('progressBar');
   const loadingText = document.getElementById('loadingText');
-
   loadingInterval = setInterval(() => {
     if (step < loadingSteps.length) {
       progressBar.style.width = `${loadingSteps[step].progress}%`;
       loadingText.textContent = loadingSteps[step].text;
       step++;
     }
-  }, 1500);
+  }, 2000);
 }
 
 function hideLoading() {
@@ -274,11 +295,10 @@ function hideLoading() {
   }, 300);
 }
 
-// Mostrar prendas detectadas
+// ---- Mostrar prendas detectadas ----
 function showDetectedItems(items) {
   const detected = document.getElementById('clothesDetected');
   const tags = document.getElementById('itemsTags');
-
   tags.innerHTML = '';
   items.forEach(item => {
     const tag = document.createElement('span');
@@ -286,67 +306,55 @@ function showDetectedItems(items) {
     tag.textContent = item;
     tags.appendChild(tag);
   });
-
   detected.style.display = 'block';
 }
 
-// Mostrar resultados
+// ---- Mostrar resultados ----
 function showResults(outfits) {
   const section = document.getElementById('resultsSection');
   const grid = document.getElementById('outfitsGrid');
-
   grid.innerHTML = '';
 
-  const vibes = ['💅 Casual Chic', '🔥 Power Look', '🌸 Soft Girl', '✨ Y2K Vibes', '🖤 Dark Mode', '🌈 Colorful'];
-  const ratingEmojis = ['⭐⭐⭐⭐⭐', '⭐⭐⭐⭐✨', '✨✨✨✨✨', '💎💎💎💎💎', '🔥🔥🔥🔥🔥'];
+  const vibes = ['💅 Casual Chic','🔥 Power Look','🌸 Soft Girl','✨ Y2K Vibes','🖤 Dark Mode','🌈 Colorful'];
+  const ratings = ['⭐⭐⭐⭐⭐','⭐⭐⭐⭐✨','✨✨✨✨✨','💎💎💎💎💎','🔥🔥🔥🔥🔥'];
   const pieceIcons = {
-    'camiseta': '👕', 'camisa': '👔', 'top': '🎽', 'blusa': '👗',
-    'pantalón': '👖', 'pantalones': '👖', 'jeans': '👖', 'shorts': '🩳',
-    'falda': '👗', 'vestido': '👗', 'chaqueta': '🧥', 'abrigo': '🧥',
-    'zapatos': '👟', 'zapatillas': '👟', 'botas': '👢', 'tacones': '👠',
-    'bolso': '👜', 'accesorios': '💍', 'cinturón': '⌚', 'gorra': '🧢',
-    'suéter': '🧶', 'jersey': '🧶', 'hoodie': '🧥', 'chaleco': '🦺',
+    'camiseta':'👕','camisa':'👔','top':'🎽','blusa':'👗',
+    'pantalón':'👖','pantalones':'👖','jeans':'👖','shorts':'🩳',
+    'falda':'👗','vestido':'👗','chaqueta':'🧥','abrigo':'🧥',
+    'zapatos':'👟','zapatillas':'👟','botas':'👢','tacones':'👠',
+    'bolso':'👜','accesorios':'💍','cinturón':'⌚','gorra':'🧢',
+    'suéter':'🧶','jersey':'🧶','hoodie':'🧥','chaleco':'🦺',
   };
 
   outfits.forEach((outfit, index) => {
     const card = document.createElement('div');
     card.className = 'outfit-card';
 
-    const vibe = vibes[index % vibes.length];
-    const rating = ratingEmojis[index % ratingEmojis.length];
-
     const piecesHTML = (outfit.pieces || []).map(piece => {
-      const pieceLower = piece.toLowerCase();
+      const lower = piece.toLowerCase();
       let icon = '✨';
       for (const [key, val] of Object.entries(pieceIcons)) {
-        if (pieceLower.includes(key)) { icon = val; break; }
+        if (lower.includes(key)) { icon = val; break; }
       }
-      return `
-        <div class="outfit-piece">
-          <span class="piece-icon">${icon}</span>
-          <span>${piece}</span>
-        </div>
-      `;
+      return `<div class="outfit-piece"><span class="piece-icon">${icon}</span><span>${piece}</span></div>`;
     }).join('');
 
     card.innerHTML = `
       <div class="outfit-card-header">
-        <span class="outfit-number">LOOK #${String(index + 1).padStart(2, '0')}</span>
-        <span class="outfit-vibe">${vibe}</span>
+        <span class="outfit-number">LOOK #${String(index+1).padStart(2,'0')}</span>
+        <span class="outfit-vibe">${vibes[index % vibes.length]}</span>
       </div>
       <div class="outfit-card-body">
-        <div class="outfit-name">${outfit.name || `Outfit ${index + 1}`}</div>
+        <div class="outfit-name">${outfit.name || `Outfit ${index+1}`}</div>
         <div class="outfit-pieces">${piecesHTML}</div>
         ${outfit.tip ? `
           <div class="outfit-tip">
             <div class="tip-label">💡 TIP DE ESTILO:</div>
             <div class="tip-text">${outfit.tip}</div>
-          </div>
-        ` : ''}
-        <div class="outfit-rating">${rating}</div>
+          </div>` : ''}
+        <div class="outfit-rating">${ratings[index % ratings.length]}</div>
       </div>
     `;
-
     grid.appendChild(card);
   });
 
@@ -354,20 +362,26 @@ function showResults(outfits) {
   section.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// Mostrar error
+// ---- Error ----
 function showError(message) {
   document.getElementById('errorMsg').textContent = message;
   document.getElementById('errorSection').style.display = 'block';
   document.getElementById('errorSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-// Resetear todo
+// ---- Reset ----
 function resetAll() {
-  removeImage('clothes');
-  removeImage('person');
+  state.clothesFiles = [];
+  state.personBase64 = null;
+  renderClothesPreviews();
+  document.getElementById('clothesDropZone').style.display = 'block';
+  document.getElementById('clothesDetected').style.display = 'none';
+  document.getElementById('itemsTags').innerHTML = '';
+  document.getElementById('personPreview').style.display = 'none';
+  document.getElementById('personDropZone').style.display = 'block';
   document.getElementById('resultsSection').style.display = 'none';
   document.getElementById('errorSection').style.display = 'none';
   document.getElementById('loadingSection').style.display = 'none';
-
+  checkGenerateReady();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
