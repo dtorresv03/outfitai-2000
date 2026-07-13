@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>✨ OutfitAI 2000 ✨ - Tu Stylist Virtual</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- Fondo animado de estrellas -->
+  <div class="stars-bg" id="starsBg"></div>
+
+  <!-- Barra superior estilo Windows XP -->
+  <div class="taskbar">
+    <div class="taskbar-logo">
+      <span class="pixel-icon">💻</span>
+      <span class="taskbar-title">OutfitAI™ 2000</span>
+    </div>
+    <div class="taskbar-right">
+      <span class="time-display" id="timeDisplay">00:00</span>
+      <span class="pixel-icon">📡</span>
+      <span class="pixel-icon">🔊</span>
+    </div>
+  </div>
+
+  <!-- Header principal -->
+  <header class="main-header">
+    <div class="marquee-wrap">
+      <marquee class="marquee-text">✨ BIENVENIDA A OUTFITAI 2000 ✨ TU ESTILISTA VIRTUAL CON IA ✨ SUBE TUS PRENDAS Y CREA LOOKS INCREIBLES ✨ POWERED BY AI ✨ &nbsp;&nbsp;&nbsp;</marquee>
+    </div>
+
+    <div class="header-content">
+      <div class="glitter-title">
+        <h1 class="main-title">
+          <span class="title-y2k">✨ OutfitAI</span>
+          <span class="title-2000">2000 ✨</span>
+        </h1>
+        <p class="subtitle">~ Tu Estilista Virtual con Inteligencia Artificial ~</p>
+        <div class="button-row">
+          <button class="y2k-btn btn-pink" onclick="scrollToApp()">⭐ COMENZAR ⭐</button>
+          <button class="y2k-btn btn-blue" onclick="showInfo()">💎 ¿CÓMO FUNCIONA? 💎</button>
+        </div>
+      </div>
+
+      <div class="header-deco">
+        <div class="spinning-star">⭐</div>
+        <div class="butterfly-deco">🦋</div>
+        <div class="heart-deco">💗</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Modal de info -->
+  <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+    <div class="modal-window" onclick="event.stopPropagation()">
+      <div class="modal-titlebar">
+        <span>💡 ¿Cómo funciona OutfitAI 2000?</span>
+        <button class="modal-close" onclick="closeInfo()">✖</button>
+      </div>
+      <div class="modal-body">
+        <ol class="how-list">
+          <li>📸 <strong>Sube una foto</strong> de tus prendas (varias juntas o por separado)</li>
+          <li>🧍 <strong>Sube una foto</strong> tuya de cuerpo completo</li>
+          <li>🤖 <strong>La IA analiza</strong> tus prendas y detecta cada pieza</li>
+          <li>✨ <strong>Genera combinaciones</strong> de outfits completos para ti</li>
+          <li>💅 <strong>Elige tu look favorito</strong> y luce increíble</li>
+        </ol>
+        <button class="y2k-btn btn-pink" onclick="closeInfo()">💖 ¡Entendido!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- App principal -->
+  <main class="app-container" id="appSection">
+
+    <!-- Panel de uploads -->
+    <div class="panels-grid">
+
+      <!-- Panel 1: Prendas -->
+      <div class="panel y2k-panel panel-clothes">
+        <div class="panel-titlebar">
+          <span class="panel-icon">👗</span>
+          <span>Mis Prendas</span>
+          <div class="panel-dots">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-yellow"></span>
+            <span class="dot dot-green"></span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <p class="panel-desc">Sube una foto con todas tus prendas</p>
+
+          <div class="upload-zone" id="clothesDropZone"
+               ondragover="handleDragOver(event)"
+               ondragleave="handleDragLeave(event)"
+               ondrop="handleDrop(event, 'clothes')">
+            <div class="upload-inner">
+              <div class="upload-icon">👗</div>
+              <p class="upload-text">Arrastra tu foto aquí</p>
+              <p class="upload-subtext">o haz clic para seleccionar</p>
+              <input type="file" id="clothesInput" accept="image/*" onchange="handleFileSelect(event, 'clothes')" class="file-input" />
+              <button class="y2k-btn btn-purple upload-btn" onclick="document.getElementById('clothesInput').click()">
+                📁 Seleccionar Foto
+              </button>
+            </div>
+          </div>
+
+          <div class="preview-container" id="clothesPreview" style="display:none">
+            <img id="clothesImg" class="preview-img" alt="Prendas" />
+            <button class="y2k-btn btn-red btn-small" onclick="removeImage('clothes')">✖ Quitar</button>
+          </div>
+
+          <div class="detected-items" id="clothesDetected" style="display:none">
+            <p class="detected-title">🔍 Prendas detectadas:</p>
+            <div class="items-tags" id="itemsTags"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 2: Foto personal -->
+      <div class="panel y2k-panel panel-person">
+        <div class="panel-titlebar">
+          <span class="panel-icon">🧍</span>
+          <span>Mi Foto</span>
+          <div class="panel-dots">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-yellow"></span>
+            <span class="dot dot-green"></span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <p class="panel-desc">Sube tu foto de cuerpo completo</p>
+
+          <div class="upload-zone" id="personDropZone"
+               ondragover="handleDragOver(event)"
+               ondragleave="handleDragLeave(event)"
+               ondrop="handleDrop(event, 'person')">
+            <div class="upload-inner">
+              <div class="upload-icon">📸</div>
+              <p class="upload-text">Arrastra tu foto aquí</p>
+              <p class="upload-subtext">o haz clic para seleccionar</p>
+              <input type="file" id="personInput" accept="image/*" onchange="handleFileSelect(event, 'person')" class="file-input" />
+              <button class="y2k-btn btn-cyan upload-btn" onclick="document.getElementById('personInput').click()">
+                📁 Seleccionar Foto
+              </button>
+            </div>
+          </div>
+
+          <div class="preview-container" id="personPreview" style="display:none">
+            <img id="personImg" class="preview-img" alt="Mi foto" />
+            <button class="y2k-btn btn-red btn-small" onclick="removeImage('person')">✖ Quitar</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Botón de generar -->
+    <div class="generate-section">
+      <div class="generate-glow">
+        <button class="y2k-btn btn-generate" id="generateBtn" onclick="generateOutfits()" disabled>
+          <span class="btn-text">🤖 GENERAR OUTFITS CON IA 🤖</span>
+        </button>
+      </div>
+      <p class="generate-hint" id="generateHint">Sube ambas fotos para activar la magia ✨</p>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-section" id="loadingSection" style="display:none">
+      <div class="loading-window">
+        <div class="loading-titlebar">
+          <span>🤖 OutfitAI está trabajando...</span>
+        </div>
+        <div class="loading-body">
+          <div class="progress-bar-wrap">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+          <p class="loading-text" id="loadingText">Analizando tus prendas con IA...</p>
+          <div class="loading-icons">
+            <span class="loading-spin">✨</span>
+            <span class="loading-spin delay1">💎</span>
+            <span class="loading-spin delay2">⭐</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resultados -->
+    <div class="results-section" id="resultsSection" style="display:none">
+      <div class="results-header">
+        <h2 class="results-title">✨ Tus Outfits Perfectos ✨</h2>
+        <p class="results-subtitle">Combinaciones generadas especialmente para ti</p>
+      </div>
+
+      <div class="outfits-grid" id="outfitsGrid">
+        <!-- Los outfits se generan dinámicamente -->
+      </div>
+
+      <div class="results-actions">
+        <button class="y2k-btn btn-pink" onclick="generateOutfits()">🔄 Regenerar Outfits</button>
+        <button class="y2k-btn btn-purple" onclick="resetAll()">🆕 Empezar de Nuevo</button>
+      </div>
+    </div>
+
+    <!-- Error section -->
+    <div class="error-section" id="errorSection" style="display:none">
+      <div class="error-window">
+        <div class="error-titlebar">
+          <span>⚠️ Error del Sistema</span>
+          <button class="modal-close" onclick="closeError()">✖</button>
+        </div>
+        <div class="error-body">
+          <p class="error-icon">💥</p>
+          <p class="error-msg" id="errorMsg">Algo salió mal. Por favor intenta de nuevo.</p>
+          <button class="y2k-btn btn-yellow" onclick="closeError()">OK</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer Y2K -->
+  <footer class="y2k-footer">
+    <div class="footer-content">
+      <div class="footer-badges">
+        <div class="badge">🌐 IE Compatible</div>
+        <div class="badge">💎 Flash Ready</div>
+        <div class="badge">⭐ Y2K Certified</div>
+        <div class="badge">🤖 AI Powered</div>
+      </div>
+      <p class="footer-text">
+        ✨ OutfitAI 2000™ - Todos los derechos reservados ✨<br/>
+        <span class="footer-small">Best viewed in 800x600 resolution • Netscape Navigator 4.0+</span>
+      </p>
+      <div class="visitor-counter">
+        <span class="counter-label">Visitas:</span>
+        <span class="counter-digits" id="visitorCount">042069</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

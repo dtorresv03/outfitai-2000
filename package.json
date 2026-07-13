@@ -1,0 +1,22 @@
+{
+  "name": "outfitai-2000",
+  "version": "1.0.0",
+  "description": "OutfitAI 2000 - Generador de outfits con IA y estética Y2K",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": ["fashion", "ai", "outfit", "y2k", "openai"],
+  "author": "OutfitAI 2000",
+  "license": "MIT",
+  "dependencies": {
+    "openai": "^4.52.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
